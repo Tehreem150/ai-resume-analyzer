@@ -74,57 +74,49 @@ export default function App() {
   };
 
   // Upload file & extract text
-  const handleUpload = async (e) => {
-    e.preventDefault();
-    if (!file || !isValidFile) return;
+ const handleUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
 
     const formData = new FormData();
     formData.append("resume", file);
 
     try {
       setLoading(true);
-      setMessage("");
-      setProgress(0);
-
-      const res = await axios.post("http://localhost:5000/upload", formData, {
+      const res = await axios.post("/api/upload", formData, {
         headers: { "Content-Type": "multipart/form-data" },
-        onUploadProgress: (event) => {
-          if (event.total) {
-            setProgress(Math.round((event.loaded * 100) / event.total));
-          }
-        },
       });
-
-      setText(res.data.text || "No text extracted.");
-      setMessage("✅ File uploaded & text extracted successfully!");
+      setResumeText(res.data.text);
     } catch (err) {
+      alert("Failed to upload file.");
       console.error(err);
-      setMessage("❌ Upload failed. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
   // AI Resume Analysis
-  const handleAnalyze = async () => {
-    if (!text) return setMessage("⚠️ Please upload and extract a resume first.");
-    if (!jobDescription.trim()) return setMessage("⚠️ Please enter a job description.");
+ const handleAnalyze = async () => {
+    if (!resumeText || !jobDescription) {
+      alert("Please upload a resume and enter a job description.");
+      return;
+    }
 
     try {
-      setAnalysisLoading(true);
-      setMessage("");
-      const res = await axios.post("http://localhost:5000/analyze", {
-        resumeText: text,
+      setLoading(true);
+      const res = await axios.post("/api/analyze", {
+        resumeText,
         jobDescription,
       });
-      setAnalysisResult(res.data);
+      setAnalysis(res.data);
     } catch (err) {
+      alert("Failed to analyze resume.");
       console.error(err);
-      setMessage("❌ AI analysis failed.");
     } finally {
-      setAnalysisLoading(false);
+      setLoading(false);
     }
   };
+
 
   const handleReset = () => {
     setFile(null);
