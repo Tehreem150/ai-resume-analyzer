@@ -1,17 +1,36 @@
-// frontend/api/upload.js
-import multer from "multer";
+import formidable from "formidable";
 import fs from "fs";
-import pdf from "pdf-parse-fixed";
-import mammoth from "mammoth";
+import pdfParse from "pdf-parse";
 
-const upload = multer({ dest: "/tmp" });
+export const config = {
+  api: {
+    bodyParser: false, // we use formidable for file parsing
+  },
+};
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  // NOTE: Multer doesn’t work directly with Vercel (no disk writes).
-  // For now, you should accept base64 or text instead of file upload.
-  return res.json({ error: "File uploads not supported on Vercel. Use text mode." });
+  const form = new formidable.IncomingForm();
+
+  form.parse(req, async (err, fields, files) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: "File parsing failed" });
+    }
+
+    try {
+      const file = files.resume[0]; // 👈 field name must match FormData
+      const dataBuffer = fs.readFileSync(file.filepath);
+
+      // extract PDF text
+      const pdfData = await pdfParse(dataBuffer);
+      return res.status(200).json({ text: pdfData.text });
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({ error: "Failed to extract text" });
+    }
+  });
 }
