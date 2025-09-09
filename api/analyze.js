@@ -1,17 +1,9 @@
+// frontend/api/analyze.js
 import OpenAI from "openai";
 
 const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
-
-function extractJson(str) {
-  try {
-    const match = str.match(/\{[\s\S]*\}/);
-    return match ? JSON.parse(match[0]) : { raw: str };
-  } catch {
-    return { raw: str };
-  }
-}
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -25,22 +17,19 @@ export default async function handler(req, res) {
   }
 
   const prompt = `
-You are an AI resume analyzer. 
-Strictly respond in valid JSON only:
+  You are an AI resume analyzer.
+  Return a JSON object with:
+  - score (0-100)
+  - matchedSkills
+  - missingSkills
+  - suggestions
 
-{
-  "score": number (0-100),
-  "matchedSkills": [ "skill1", "skill2" ],
-  "missingSkills": [ "skill1", "skill2" ],
-  "suggestions": [ "suggestion1", "suggestion2" ]
-}
+  Resume:
+  ${resumeText}
 
-Resume:
-${resumeText}
-
-Job Description:
-${jobDescription}
-`;
+  Job Description:
+  ${jobDescription}
+  `;
 
   try {
     const response = await client.chat.completions.create({
@@ -49,11 +38,8 @@ ${jobDescription}
     });
 
     const content = response.choices[0].message.content;
-    const analysis = extractJson(content);
-
-    res.status(200).json(analysis);
+    res.json({ result: content });
   } catch (err) {
-    console.error("AI analysis error:", err);
-    res.status(500).json({ error: "Failed to analyze resume." });
+    res.status(500).json({ error: "AI analysis failed" });
   }
 }
