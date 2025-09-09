@@ -73,10 +73,13 @@ export default function App() {
     }
   };
 
-  // Upload file & extract text
- const handleUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+  // ✅ Upload file & extract text
+  const handleUpload = async (e) => {
+    e.preventDefault();
+    if (!file) {
+      alert("Please select a file first.");
+      return;
+    }
 
     const formData = new FormData();
     formData.append("resume", file);
@@ -86,7 +89,10 @@ export default function App() {
       const res = await axios.post("/api/upload", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
-      setResumeText(res.data.text);
+
+      setText(res.data.text); // ✅ set extracted text
+      setMessage("✅ File uploaded and text extracted!");
+      setProgress(100);
     } catch (err) {
       alert("Failed to upload file.");
       console.error(err);
@@ -95,28 +101,28 @@ export default function App() {
     }
   };
 
-  // AI Resume Analysis
- const handleAnalyze = async () => {
-    if (!resumeText || !jobDescription) {
+  // ✅ AI Resume Analysis
+  const handleAnalyze = async () => {
+    if (!text || !jobDescription) {
       alert("Please upload a resume and enter a job description.");
       return;
     }
 
     try {
-      setLoading(true);
+      setAnalysisLoading(true);
       const res = await axios.post("/api/analyze", {
-        resumeText,
+        resumeText: text,
         jobDescription,
       });
-      setAnalysis(res.data);
+
+      setAnalysisResult(res.data);
     } catch (err) {
       alert("Failed to analyze resume.");
       console.error(err);
     } finally {
-      setLoading(false);
+      setAnalysisLoading(false);
     }
   };
-
 
   const handleReset = () => {
     setFile(null);
@@ -227,6 +233,7 @@ export default function App() {
           )}
         </form>
 
+        {/* Progress + Messages */}
         {loading && (
           <div className="w-full bg-gray-200 rounded-full h-3 mt-4">
             <div
@@ -235,13 +242,11 @@ export default function App() {
             ></div>
           </div>
         )}
-
         {progress > 0 && !loading && (
           <p className="text-sm text-gray-600 mt-1 text-center">
             ✅ Upload complete ({progress}%)
           </p>
         )}
-
         {message && (
           <p
             className={`mt-4 text-center font-medium ${
@@ -286,35 +291,28 @@ export default function App() {
             </h2>
 
             {/* Score */}
-         <div className="flex flex-col items-center justify-center">
-  <CircularProgress score={analysisResult.score ?? 0} />
-  <p className="mt-2 font-semibold text-gray-700">Resume Match Score</p>
-</div>
-
+            <div className="flex flex-col items-center justify-center">
+              <CircularProgress score={analysisResult.score ?? 0} />
+              <p className="mt-2 font-semibold text-gray-700">
+                Resume Match Score
+              </p>
+            </div>
 
             {/* Skills */}
             <div className="grid md:grid-cols-2 gap-4">
               <div className="p-4 bg-green-50 rounded-xl shadow">
-                <h3 className="font-semibold text-green-700">
-                  ✅ Matched Skills
-                </h3>
+                <h3 className="font-semibold text-green-700">✅ Matched Skills</h3>
                 <ul className="list-disc ml-5 text-sm mt-2 space-y-1">
                   {analysisResult.matchedSkills?.length > 0
-                    ? analysisResult.matchedSkills.map((s, i) => (
-                        <li key={i}>{s}</li>
-                      ))
+                    ? analysisResult.matchedSkills.map((s, i) => <li key={i}>{s}</li>)
                     : "No matches found"}
                 </ul>
               </div>
               <div className="p-4 bg-red-50 rounded-xl shadow">
-                <h3 className="font-semibold text-red-700">
-                  ⚠️ Missing Skills
-                </h3>
+                <h3 className="font-semibold text-red-700">⚠️ Missing Skills</h3>
                 <ul className="list-disc ml-5 text-sm mt-2 space-y-1">
                   {analysisResult.missingSkills?.length > 0
-                    ? analysisResult.missingSkills.map((s, i) => (
-                        <li key={i}>{s}</li>
-                      ))
+                    ? analysisResult.missingSkills.map((s, i) => <li key={i}>{s}</li>)
                     : "No missing skills"}
                 </ul>
               </div>
